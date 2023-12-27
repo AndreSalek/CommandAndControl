@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DataDashboard.BLL;
+using DataDashboard.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -8,8 +10,16 @@ using System.Text;
 namespace DataDashboard.Controllers
 {
     [Authorize]
-    public class BotController : Controller
+    public class ClientController : Controller
     {
+        private readonly ILogger<ClientController> _logger;
+        private readonly ConnectionPipeline _clientManager;
+        public ClientController(ILogger<ClientController> logger, ConnectionPipeline clientManager)
+        {
+            _logger = logger;
+            _clientManager = clientManager;
+        }
+
         public ActionResult Index()
         {
             return View();
@@ -21,11 +31,8 @@ namespace DataDashboard.Controllers
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                byte[] data = new byte[2096];
-                //data = Encoding.UTF8.GetBytes("Test string");
-                await webSocket.ReceiveAsync(data, CancellationToken.None);
-                Trace.WriteLine(Encoding.UTF8.GetString(data));
+                using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                await _clientManager.HandleClient(HttpContext.Session.Id, webSocket);
                 await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close", CancellationToken.None);
             }
             else

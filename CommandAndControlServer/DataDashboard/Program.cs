@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Azure.Core;
 using DataDashboard.Data;
 using DataDashboard.Controllers;
+using DataDashboard.BLL;
 
 namespace DataDashboard
 {
@@ -25,6 +26,7 @@ namespace DataDashboard
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString)
             );
+            // Users represent the accounts that are registered to the website and can access the dashboard
             builder.Services.AddScoped<DbContext>(services => services.GetRequiredService<ApplicationDbContext>());
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
                             .AddUserStore<UserStore<IdentityUser>>()
@@ -33,6 +35,11 @@ namespace DataDashboard
             builder.Services.AddScoped<UserManager<IdentityUser>>();
             builder.Services.AddScoped<SignInManager<IdentityUser>>();
             builder.Services.AddScoped<ILogger, Logger<AccountController>>();
+            builder.Services.AddScoped<ILogger, Logger<ClientController>>();
+            builder.Services.AddScoped<ILogger, Logger<ConnectionPipeline>>();
+            // Clients represent the 'endpoints' that are connected to the server through websocket
+            builder.Services.AddScoped<ClientRepository>();
+            builder.Services.AddScoped<ConnectionPipeline>();
             //TODO: EmailSender service implementation
 
             //Add services to the container.
