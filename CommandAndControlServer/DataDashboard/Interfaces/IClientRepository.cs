@@ -1,20 +1,21 @@
 ﻿using DataDashboard.Models;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace DataDashboard.Interfaces
 {
     public interface IClientRepository
     {
-        Task AddClient(Client client);
-        Task AddClientHwInfo(ClientHwInfo hwInfo);
-        Task AddClientSessionData(SessionData info);
-        Task DeleteClient(Client client);
-        Task DeleteClientHwInfo(ClientHwInfo hwInfo);
-        Task DeleteClientSessionData(SessionData data);
-        Task<Client> GetClient(string id);
-        Task<ClientHwInfo> GetClientHwInfo(int clientId);
-        Task<IList<SessionData>> GetClientSessionData(int id);
-        Task UpdateClient(Client client);
-        Task UpdateClientHwInfo(ClientHwInfo hwInfo);
-        Task UpdateClientSessionData(SessionData data);
+        Task<EntityEntry<Client>> AddClientAsync(Client client);
+        Task AddClientHwInfoAsync(ClientHwInfo hwInfo);
+        Task AddClientSessionDataAsync(SessionData info);
+        Task DeleteClientAsync(Client client);
+        Task DeleteClientHwInfoAsync(ClientHwInfo hwInfo);
+        Task DeleteClientSessionDataAsync(SessionData data);
+        Task<Client> GetClientAsync(string id);
+        Task<ClientHwInfo> GetClientHwInfoByMACAsync(string mac);
+        Task<IList<SessionData>> GetClientSessionDataAsync(int id);
+        Task UpdateClientAsync(Client client);
+        Task UpdateClientHwInfoAsync(ClientHwInfo hwInfo);
+        Task UpdateClientSessionDataAsync(SessionData data);
     }
 }

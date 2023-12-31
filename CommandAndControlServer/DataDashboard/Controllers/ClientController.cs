@@ -13,15 +13,16 @@ namespace DataDashboard.Controllers
     public class ClientController : Controller
     {
         private readonly ILogger<ClientController> _logger;
-        private readonly ConnectionPipeline _clientManager;
-        public ClientController(ILogger<ClientController> logger, ConnectionPipeline clientManager)
+        private readonly ConnectionPipeline _connectionPipeline;
+        public ClientController(ILogger<ClientController> logger, ConnectionPipeline connectionPipeline)
         {
             _logger = logger;
-            _clientManager = clientManager;
+            _connectionPipeline = connectionPipeline;
         }
-
-        public ActionResult Index()
+        [AllowAnonymous]
+        public async Task<ActionResult> Index()
         {
+            await _connectionPipeline.Test();
             return View();
         }
 
@@ -31,9 +32,15 @@ namespace DataDashboard.Controllers
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                await _clientManager.HandleClient(HttpContext.Session.Id, webSocket);
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close", CancellationToken.None);
+                try
+                {
+                    await _connectionPipeline.HandleClient(HttpContext);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Internal server error handling a client");
+                    HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                }
             }
             else
             {

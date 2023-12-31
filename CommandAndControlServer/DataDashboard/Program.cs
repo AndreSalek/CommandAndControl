@@ -10,6 +10,7 @@ using Azure.Core;
 using DataDashboard.Data;
 using DataDashboard.Controllers;
 using DataDashboard.BLL;
+using DataDashboard.BLL.Services;
 
 namespace DataDashboard
 {
@@ -39,10 +40,10 @@ namespace DataDashboard
             builder.Services.AddScoped<ILogger, Logger<ConnectionPipeline>>();
             // Clients represent the 'endpoints' that are connected to the server through websocket
             builder.Services.AddScoped<ClientRepository>();
-            builder.Services.AddScoped<ConnectionPipeline>();
+            builder.Services.AddScoped<ClientService>();
+            builder.Services.AddSingleton<ConnectionPipeline>();
             //TODO: EmailSender service implementation
 
-            //Add services to the container.
             //Add global AntiForgeryToken filter
             builder.Services.AddControllersWithViews(options =>
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute())
@@ -73,8 +74,11 @@ namespace DataDashboard
                 name: "Account",
                 pattern: "{controller=Account}/{action=Login}");
             app.MapControllerRoute(
-                name: "Bot",
-                pattern: "{controller=Bot}/{action=Index}");
+                name: "Client",
+                pattern: "{controller=Client}/{action=Index}");
+            app.MapControllerRoute(
+                name: "Client",
+                pattern: "{controller=Client}/{action=ws}");
 
             app.Run();
         }
