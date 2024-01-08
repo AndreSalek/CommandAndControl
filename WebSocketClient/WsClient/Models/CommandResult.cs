@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WsClient.Models
 {
-    internal class CommandResult
+    public class CommandResult
     {
         public string Content { get; set; }
         public bool IsError { get; set; }
