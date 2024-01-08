@@ -10,16 +10,17 @@ namespace WsClient.Handlers
 {
     internal class CommandShell : IShell
     {
-        public void Create()
-        {
-            throw new NotImplementedException();
-        }
-        public void AddScript(string scriptPath)
+        public Task AddScriptAsync(Script script)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<CommandResult> ExecuteAsync()
+        public void Create()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ScriptResult> ExecuteAsync()
         {
             throw new NotImplementedException();
         }

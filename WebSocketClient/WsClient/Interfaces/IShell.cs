@@ -10,7 +10,7 @@ namespace WsClient.Interfaces
     public interface IShell
     {
         void Create();
-        void AddScript(string scriptPath);
-        Task<CommandResult> ExecuteAsync();
+        Task AddScriptAsync(Script script);
+        Task<ScriptResult> ExecuteAsync();
     }
 }

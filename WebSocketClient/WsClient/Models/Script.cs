@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 
 namespace WsClient.Models
 {
-    public class Command
+    public class Script
     {
-        public string Content { get; set; } = null!;
+        public int Id { get; set; }
+        public string[] Lines { get; set; } = null!;
         public ShellType Shell { get; set; }
-        public bool ReturnOutput { get; set; }
-        public bool WaitForNextCommand { get; set; }
     }
 }

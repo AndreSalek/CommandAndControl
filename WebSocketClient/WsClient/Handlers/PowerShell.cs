@@ -11,34 +11,59 @@ namespace WsClient.Handlers
 {
     public class PowerShell : IShell
     {
-        private Process _shellProcess;
+        private Process _shellProcess = null;
+        private string _scriptPath = null;
+        private int _commandId;
         public void Create()
         {
             _shellProcess = new Process();
             _shellProcess.StartInfo = new ProcessStartInfo()
             {
                 FileName = "powershell.exe",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
         }
 
-        public void AddScript(string scriptPath)
+        public async Task AddScriptAsync(Script script)
         {
             if (_shellProcess == null)
                 throw new InvalidOperationException("Instance of the process is not created.");
 
-            _shellProcess.StartInfo.Arguments = "& " + scriptPath;
+            // Write script lines to a file
+            _scriptPath = Directory.GetCurrentDirectory() + @"\script" + script.Id.ToString() + ".ps1";
+            if (File.Exists(_scriptPath)) File.Delete(_scriptPath);
+            await File.AppendAllLinesAsync(_scriptPath,
+                                    script.Lines,
+                                    Encoding.UTF8,
+                                    CancellationToken.None);
+            // Set the script path as argument (`&` is prefix for executing a PS file)
+            _shellProcess.StartInfo.Arguments = "& " + _scriptPath;
         }
         
-        public async Task<CommandResult> ExecuteAsync()
+        public async Task<ScriptResult> ExecuteAsync()
         {
-            //TODO: Implement execute
-            return new CommandResult()
+            // Start the process
+            _shellProcess.Start();
+
+            // Read process streams 
+            string stdOut = _shellProcess.StandardOutput.ReadToEnd();
+            string stdErr = _shellProcess.StandardError.ReadToEnd();
+
+            await // Wait for the process to exit
+            _shellProcess.WaitForExitAsync();
+
+            // Free process resources
+            _shellProcess.Dispose();
+
+            // Return the result
+            return new ScriptResult()
             {
-                Content = "Success",
-                IsError = false,
-                ErrorMessage = ""
+                CommandId = _commandId,
+                Content = stdOut,
+                IsError = !String.IsNullOrEmpty(stdErr) ? true : false
             };
         }
     }

@@ -37,11 +37,9 @@ namespace DataDashboard
             builder.Services.AddScoped<SignInManager<IdentityUser>>();
             builder.Services.AddScoped<ILogger, Logger<AccountController>>();
             builder.Services.AddScoped<ILogger, Logger<ClientController>>();
-            builder.Services.AddScoped<ILogger, Logger<ConnectionPipeline>>();
             // Clients represent the 'endpoints' that are connected to the server through websocket
             builder.Services.AddScoped<ClientRepository>();
-            builder.Services.AddScoped<ClientService>();
-            builder.Services.AddSingleton<ConnectionPipeline>();
+            builder.Services.AddSingleton<ClientService>();
             //TODO: EmailSender service implementation
 
             //Add global AntiForgeryToken filter

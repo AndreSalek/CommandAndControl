@@ -15,23 +15,22 @@ namespace WsClient
         private ClientWebSocket _socket = new ClientWebSocket();
         ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         public ClientWebSocket Socket { get => _socket; }
-        public event EventHandler<CommandEventArgs> CommandReceived;
-
-        protected virtual void OnCommandReceived(object? sender, CommandEventArgs command) =>
-            CommandReceived?.Invoke(this, command);
 
         public async Task ConnectAsync(Uri serverUri) =>
             await _socket.ConnectAsync(serverUri, CancellationToken.None);
         public async Task CloseAsync(WebSocketCloseStatus status, string desc) =>
             await _socket.CloseAsync(status, desc, CancellationToken.None);
 
+        /// <summary>
+        /// Sends client hardware information to server for authentication
+        /// </summary>
+        /// <returns></returns>
         public async Task Authenticate()
         {
-            // Create message and encode message for transport
             ClientHwInfo info = InfoCollector.GetHwInfo();
+
+            byte[] buffer = new byte[4096];
             string message = JsonSerializer.Serialize<ClientHwInfo>(info);
-            int buffersize = System.Text.UTF8Encoding.Unicode.GetByteCount(message);
-            byte[] buffer = new byte[buffersize];
             buffer = Encoding.UTF8.GetBytes(message);
 
             await _socket.SendAsync(new ArraySegment<byte>(buffer),
@@ -40,37 +39,33 @@ namespace WsClient
                     CancellationToken.None);
         }
         /// <summary>
-        /// Listens on socket until a command is received
+        /// Listens on socket until a valid script is received
         /// </summary>
-        /// <returns>Asynchronous representation of </returns>
-        public async Task ListenForCommand()
+        /// <returns>Asynchronous representation of Script</returns>
+        public async Task<Script> ListenForScript()
         {
-            Command command = null!;
+            Script script = null!;
             try
             {
                 byte[] buffer = new byte[4096];
                 
-                 var wsReceiveResult = await _socket.ReceiveAsync(buffer, CancellationToken.None);
+                var wsReceiveResult = await _socket.ReceiveAsync(buffer, CancellationToken.None);
                 
-
                 string message = Encoding.UTF8.GetString(buffer);
-                command = JsonSerializer.Deserialize<Command>(message);
-                
+                script = JsonSerializer.Deserialize<Script>(message);
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
-            finally
-            {
-                OnCommandReceived(this, new CommandEventArgs(command));
-            }
+            return script;
         }
 
-        public async Task SendResponse(CommandResult result)
+        public async Task SendResponse(ScriptResult result)
         {
             byte[] buffer = new byte[4096];
-            string message = JsonSerializer.Serialize<CommandResult>(result);
+            string message = JsonSerializer.Serialize<ScriptResult>(result);
             buffer = Encoding.UTF8.GetBytes(message);
             await _socket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
         }
