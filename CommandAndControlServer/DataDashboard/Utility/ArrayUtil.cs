@@ -2,10 +2,14 @@
 {
     public static class ArrayUtil
     {
+        /// <summary>
+        /// Removes trailing nulls from a byte array
+        /// </summary>
+        /// <returns>New byte[] that does not contain 0x00 at the end </returns>
         public static byte[] RemoveTrailingNulls(byte[] array)
         {
             int i = array.Length - 1;
-            while (array[i] == 0)
+            while (array[i] == 0x00)
             {
                 i--;
             }

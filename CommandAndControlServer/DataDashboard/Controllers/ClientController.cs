@@ -2,6 +2,7 @@
 using DataDashboard.BLL.Services;
 using DataDashboard.Data;
 using DataDashboard.Models;
+using DataDashboard.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,6 @@ namespace DataDashboard.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> Index()
         {
-            await Test();
             return View();
         }
 
@@ -40,35 +40,34 @@ namespace DataDashboard.Controllers
                 HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
                 return;
             }
+            string closeReason = "Closing";
+            WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure;
+
             string id = HttpContext.Connection.Id;
-            // Accept websocket request and add it to ConnectedClients
             WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-
-            // Create scope for current request, which will exist until websocket closes
-
-            _clientService.AddConnectedClient(id, webSocket);
-            // Loop until websocket closes
-            while (!webSocket.CloseStatus.HasValue)
+            try
             {
-                try
+                Client client;
+                _clientService.AddConnectedClient(id, webSocket);
+
+                var buffer = new byte[4096];
+                var result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
+                if (result.MessageType == WebSocketMessageType.Close) return;
+                else if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var buffer = new byte[4096];
-                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _clientService.cancellationToken);
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
-                    }
-                    else if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        //Read and deserialize expected ClientHwInfo 
-                        string message = Encoding.UTF8.GetString(buffer);
-                        ClientHwInfo clientInfo = JsonSerializer.Deserialize<ClientHwInfo>(message);
+                    // Receive authentication message from client
+                    buffer = ArrayUtil.RemoveTrailingNulls(buffer);
+                    string message = Encoding.UTF8.GetString(buffer);
+                    ClientHwInfo clientInfo = JsonSerializer.Deserialize<ClientHwInfo>(message);
 
-                        // Check if client is new, retrieve client from database if not
-                        Client connectedClient;
-                        bool isNewClient = await _clientService.IsNewClientAsync(clientInfo);
-                        if (isNewClient) connectedClient = await _clientService.CreateNewClientAsync(clientInfo);
+                    client = await _clientService.GetCompleteClientAsync(clientInfo);
+                }
+                else throw new WebSocketException("Invalid authentication message type");
 
+                while (!webSocket.CloseStatus.HasValue)
+                {
+                    try
+                    {
                         // Send script to client
                         Script script = new Script()
                         {
@@ -83,33 +82,36 @@ namespace DataDashboard.Controllers
                         // Receive output from client
                         buffer = new byte[4096];
                         await webSocket.ReceiveAsync(buffer, _clientService.cancellationToken);
-                        var scrBuff = Encoding.UTF8.GetString(buffer);
-                        ScriptResult scriptResult = JsonSerializer.Deserialize<ScriptResult>(scrBuff);
+                        buffer = ArrayUtil.RemoveTrailingNulls(buffer);
+                        var json = Encoding.UTF8.GetString(buffer);
+                        ScriptResult scriptResult = JsonSerializer.Deserialize<ScriptResult>(json);
                         Trace.WriteLine(scriptResult.Content);
-
+                    }
+                    catch (InvalidDataException dataException)
+                    {
+                        _logger.LogError(dataException, "Error handling message request");
                     }
                 }
-                catch (Exception ex)
-                {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Error handling message request", CancellationToken.None);
-                    _logger.LogError(ex, "Error handling message request");
-                }
+            }
+            catch(WebSocketException ex)
+            {
+                closeReason = "Invalid message type";
+                closeStatus = WebSocketCloseStatus.InvalidMessageType;
+                _logger.LogError(ex, "Error handling message request");
+            }
+            catch (Exception ex)
+            {
+                closeReason = "Internal Server Error";
+                closeStatus = WebSocketCloseStatus.InternalServerError;
+                _logger.LogError(ex, "Internal Server Error");
+            }
+            finally
+            {
+                await webSocket.CloseAsync(closeStatus, closeReason, CancellationToken.None);
             }
         //Close with no errors
-        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close", CancellationToken.None);
+        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, closeReason, CancellationToken.None);
         _clientService.RemoveConnectedClient(id);
-        }
-
-        public async Task Test()
-        {
-            ClientHwInfo clientInfo = new ClientHwInfo()
-            {
-                MAC = "00:00:00:00:00:00",
-                OS = "Windows10",
-                CpuId = "123456789",
-                RAMCapacity = 16
-            };
-            await _clientService.CreateNewClientAsync(clientInfo);
         }
     }
 }

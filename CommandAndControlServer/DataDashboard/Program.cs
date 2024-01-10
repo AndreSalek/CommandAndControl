@@ -27,8 +27,8 @@ namespace DataDashboard
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString)
             );
-            // Users represent the accounts that are registered to the website and can access the dashboard
             builder.Services.AddScoped<DbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+            // Users represent the accounts that are registered to the website and can access the dashboard
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
                             .AddUserStore<UserStore<IdentityUser>>()
                             .AddDefaultTokenProviders();
@@ -36,9 +36,8 @@ namespace DataDashboard
             builder.Services.AddScoped<UserManager<IdentityUser>>();
             builder.Services.AddScoped<SignInManager<IdentityUser>>();
             builder.Services.AddScoped<ILogger, Logger<AccountController>>();
-            builder.Services.AddScoped<ILogger, Logger<ClientController>>();
             // Clients represent the 'endpoints' that are connected to the server through websocket
-            builder.Services.AddScoped<ClientRepository>();
+            builder.Services.AddScoped<ILogger, Logger<ClientController>>();
             builder.Services.AddSingleton<ClientService>();
             //TODO: EmailSender service implementation
 
@@ -63,7 +62,6 @@ namespace DataDashboard
             app.UseWebSockets();
 
             app.UseRouting();
-
             app.UseAuthorization();
             app.MapControllerRoute(
                 name: "default",

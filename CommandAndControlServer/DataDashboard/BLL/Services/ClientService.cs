@@ -1,5 +1,8 @@
 ﻿using DataDashboard.Data;
 using DataDashboard.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using NuGet.Versioning;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using static System.Formats.Asn1.AsnWriter;
@@ -13,6 +16,7 @@ namespace DataDashboard.BLL.Services
     {
         private ConcurrentDictionary<string, WebSocket> _connectedClients = new ConcurrentDictionary<string, WebSocket>();
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        // To retrieve scoped/transient services. In this case database context
         private IServiceProvider _provider;
         public CancellationToken cancellationToken { get => _cancellationTokenSource.Token; }
         public IReadOnlyDictionary<string, WebSocket> ConnectedClients
@@ -31,33 +35,76 @@ namespace DataDashboard.BLL.Services
             _connectedClients.TryAdd(id, webSocket);
         public bool RemoveConnectedClient(string id) =>
             _connectedClients.TryRemove(id, out _);
-        public async Task<bool> IsNewClientAsync(ClientHwInfo hwInfo)
+
+        private ApplicationDbContext GetDbContextService()
         {
             var scope = _provider.CreateScope();
-            
-            ClientRepository clientRepository = scope.ServiceProvider.GetRequiredService<ClientRepository>();
-            return await clientRepository.GetClientHwInfoByMACAsync(hwInfo.MAC) != null ? true : false;
+            return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         }
 
-        public async Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "")
+        /// <summary>
+        /// Checks if client is new by comparing MAC address to database
+        /// </summary>
+        private async Task<bool> IsNewClientAsync(ClientHwInfo hwInfo, ApplicationDbContext dbContext = default!)
         {
-            // Create client and write it to database
+            // TODO: More complex new client check (Based on more info)
+            if (dbContext == null) dbContext = GetDbContextService();
+            return await dbContext.HwInfo.SingleOrDefaultAsync(dbInfo => dbInfo.MAC == hwInfo.MAC) == null ? true : false;
+        }
+        /// <summary>
+        /// Creates new client and writes it with ClientHwInfo to database
+        /// </summary>
+        /// <param name="clientInfo"></param>
+        /// <param name="clientName"></param>
+        /// <param name="dbContext"></param>
+        /// <returns></returns>
+        private async Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "", ApplicationDbContext dbContext = default!)
+        {
+            if (dbContext == null) dbContext = GetDbContextService();
+
+            // Create client and write it to database, Id is generated there
             var client = new Client()
             {
                 Name = clientName,
             };
-            var scope = _provider.CreateScope();
+            EntityEntry<Client> record = await dbContext.AddAsync(client);
 
-            ClientRepository clientRepository = scope.ServiceProvider.GetRequiredService<ClientRepository>();
-            var record = await clientRepository.AddClientAsync(client);
-
-            // Add client id to clientInfo and write it to database
+            // Retrieve client Id from the entry and add it as primary key for ClientHwInfo
             clientInfo.Id = record.Property(prop => prop.Id).CurrentValue;
-            await clientRepository.AddClientHwInfoAsync(clientInfo);
+            await dbContext.HwInfo.AddAsync(clientInfo);
+            var dbSave = dbContext.SaveChangesAsync();
 
             Client result = record.Entity;
             result.clientHwInfo = clientInfo;
+            await dbSave;
             return result; 
         }
-    }
+
+        /// <summary>
+        /// Retrieves all information about client from database
+        /// </summary>
+        /// <returns></returns>
+        private async Task<Client> GetClientAsync(ClientHwInfo clientInfo, ApplicationDbContext dbContext = default!)
+        {
+            if (dbContext == null) dbContext = GetDbContextService();
+
+            Client client = await dbContext.Clients.SingleAsync(client => client.Id == clientInfo.Id);
+            await dbContext.Entry(client).Reference(info => info.clientHwInfo).LoadAsync();
+            await dbContext.Entry(client).Reference(info => info.SessionsHistory).LoadAsync();
+            return client;
+        }
+
+        /// <summary>
+        /// Retrieves client from database by MAC, if it does not exist, creates new one and writes ClientHwInfo to database
+        /// </summary>
+        public async Task<Client> GetCompleteClientAsync(ClientHwInfo clientInfo)
+        {
+            ApplicationDbContext dbContext = GetDbContextService();
+
+            bool isNewClient = await IsNewClientAsync(clientInfo, dbContext);
+            if (isNewClient) return await CreateNewClientAsync(clientInfo, dbContext: dbContext);
+            else return await GetClientAsync(clientInfo, dbContext);
+
+        }
+    }   
 }
