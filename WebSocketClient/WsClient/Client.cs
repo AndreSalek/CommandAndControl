@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using WsClient.Models;
+using WsClient.Utility;
 
 namespace WsClient
 {
@@ -14,6 +15,8 @@ namespace WsClient
     {
         private ClientWebSocket _socket = new ClientWebSocket();
         ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
+        public WebSocketCloseStatus? CloseStatus { get => _socket.CloseStatus; }
+        public WebSocketState State { get => _socket.State; }
         public ClientWebSocket Socket { get => _socket; }
 
         public async Task ConnectAsync(Uri serverUri) =>
@@ -24,50 +27,49 @@ namespace WsClient
         /// <summary>
         /// Sends client hardware information to server for authentication
         /// </summary>
-        /// <returns></returns>
         public async Task Authenticate()
         {
             ClientHwInfo info = InfoCollector.GetHwInfo();
 
-            byte[] buffer = new byte[4096];
-            string message = JsonSerializer.Serialize<ClientHwInfo>(info);
-            buffer = Encoding.UTF8.GetBytes(message);
-
-            await _socket.SendAsync(new ArraySegment<byte>(buffer),
-                    WebSocketMessageType.Text,
-                    true,
-                    CancellationToken.None);
+            await Send(info);
         }
+        
         /// <summary>
-        /// Listens on socket until a valid script is received
+        /// Serializes and sends data of Type `T` to server
         /// </summary>
-        /// <returns>Asynchronous representation of Script</returns>
-        public async Task<Script> ListenForScript()
-        {
-            Script script = null!;
-            try
-            {
-                byte[] buffer = new byte[4096];
-                
-                var wsReceiveResult = await _socket.ReceiveAsync(buffer, CancellationToken.None);
-                
-                string message = Encoding.UTF8.GetString(buffer);
-                script = JsonSerializer.Deserialize<Script>(message);
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            return script;
-        }
-
-        public async Task SendResponse(ScriptResult result)
+        public async Task Send<T>(T result)
         {
             byte[] buffer = new byte[4096];
-            string message = JsonSerializer.Serialize<ScriptResult>(result);
+            string message = JsonSerializer.Serialize(result);
             buffer = Encoding.UTF8.GetBytes(message);
             await _socket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        /// <summary>
+        /// Listens for data from server and attempts to deserialize it to `T` type
+        /// </summary>
+        /// <returns>Deserialized data of type `T` or null if close frame is received</returns>
+        public async Task<T?> ReceiveDataAsync<T>()
+        {
+            WebSocketReceiveResult wsReceiveResult;
+            byte[] buffer = new byte[4096];
+
+            wsReceiveResult = await _socket.ReceiveAsync(buffer, CancellationToken.None);
+            T? result = default;
+            switch (wsReceiveResult.MessageType)
+            {
+                case WebSocketMessageType.Text:
+                    buffer = ArrayUtil.RemoveTrailingNulls(buffer);
+                    string json = Encoding.UTF8.GetString(buffer);
+                    result = JsonSerializer.Deserialize<T>(json) ?? throw new InvalidDataException("Invalid data received from socket.");
+                    break;
+                case WebSocketMessageType.Close:
+                    // CloseStatus should not be null since we are receiving close frame
+                    await _socket.CloseAsync(wsReceiveResult.CloseStatus!.Value, wsReceiveResult.CloseStatusDescription, CancellationToken.None);
+                    break;
+                case WebSocketMessageType.Binary:
+                    throw new InvalidDataException("No handler for binary data");
+            }
+            return result;
         }
     }
 }

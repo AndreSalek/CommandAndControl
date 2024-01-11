@@ -58,6 +58,8 @@ namespace WsClient.Handlers
             // Free process resources
             _shellProcess.Dispose();
 
+            //TODO: I suspect some memory leak regarding this process even after dispose?? Look for it this week
+
             // Return the result
             return new ScriptResult()
             {

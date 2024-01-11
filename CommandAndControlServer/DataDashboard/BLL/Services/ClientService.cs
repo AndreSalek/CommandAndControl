@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NuGet.Versioning;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Net.WebSockets;
 using static System.Formats.Asn1.AsnWriter;
 
@@ -14,12 +15,12 @@ namespace DataDashboard.BLL.Services
     /// </summary>
     public class ClientService
     {
-        private ConcurrentDictionary<string, WebSocket> _connectedClients = new ConcurrentDictionary<string, WebSocket>();
+        private ConcurrentDictionary<Client, WebSocket> _connectedClients = new ConcurrentDictionary<Client, WebSocket>();
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         // To retrieve scoped/transient services. In this case database context
         private IServiceProvider _provider;
         public CancellationToken cancellationToken { get => _cancellationTokenSource.Token; }
-        public IReadOnlyDictionary<string, WebSocket> ConnectedClients
+        public IReadOnlyDictionary<Client, WebSocket> ConnectedClients
         {
             get
             {
@@ -31,10 +32,10 @@ namespace DataDashboard.BLL.Services
             _provider = provider;
         }
 
-        public bool AddConnectedClient(string id, WebSocket webSocket) =>
-            _connectedClients.TryAdd(id, webSocket);
-        public bool RemoveConnectedClient(string id) =>
-            _connectedClients.TryRemove(id, out _);
+        public bool AddConnectedClient(Client client, WebSocket webSocket) =>
+            _connectedClients.TryAdd(client, webSocket);
+        public bool RemoveConnectedClient(Client client) =>
+            _connectedClients.TryRemove(client, out _);
 
         private ApplicationDbContext GetDbContextService()
         {
@@ -45,7 +46,7 @@ namespace DataDashboard.BLL.Services
         /// <summary>
         /// Checks if client is new by comparing MAC address to database
         /// </summary>
-        private async Task<bool> IsNewClientAsync(ClientHwInfo hwInfo, ApplicationDbContext dbContext = default!)
+        public async Task<bool> IsNewClientAsync(ClientHwInfo hwInfo, ApplicationDbContext dbContext = default!)
         {
             // TODO: More complex new client check (Based on more info)
             if (dbContext == null) dbContext = GetDbContextService();
@@ -54,11 +55,7 @@ namespace DataDashboard.BLL.Services
         /// <summary>
         /// Creates new client and writes it with ClientHwInfo to database
         /// </summary>
-        /// <param name="clientInfo"></param>
-        /// <param name="clientName"></param>
-        /// <param name="dbContext"></param>
-        /// <returns></returns>
-        private async Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "", ApplicationDbContext dbContext = default!)
+        public async Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "", ApplicationDbContext dbContext = default!)
         {
             if (dbContext == null) dbContext = GetDbContextService();
 
@@ -83,14 +80,15 @@ namespace DataDashboard.BLL.Services
         /// <summary>
         /// Retrieves all information about client from database
         /// </summary>
-        /// <returns></returns>
-        private async Task<Client> GetClientAsync(ClientHwInfo clientInfo, ApplicationDbContext dbContext = default!)
+        public async Task<Client> GetClientAsync(ClientHwInfo clientInfo, ApplicationDbContext dbContext = default!)
         {
             if (dbContext == null) dbContext = GetDbContextService();
 
-            Client client = await dbContext.Clients.SingleAsync(client => client.Id == clientInfo.Id);
-            await dbContext.Entry(client).Reference(info => info.clientHwInfo).LoadAsync();
-            await dbContext.Entry(client).Reference(info => info.SessionsHistory).LoadAsync();
+            // There is probably better way to do this, but this is fine
+            var info = await dbContext.HwInfo.SingleAsync(db => db.MAC == clientInfo.MAC);
+            var client = await dbContext.Clients.SingleAsync(db => db.Id == info.Id);
+            client.clientHwInfo = info;
+            await dbContext.Entry(client).Collection(info => info.SessionsHistory).LoadAsync();
             return client;
         }
 
@@ -99,12 +97,11 @@ namespace DataDashboard.BLL.Services
         /// </summary>
         public async Task<Client> GetCompleteClientAsync(ClientHwInfo clientInfo)
         {
-            ApplicationDbContext dbContext = GetDbContextService();
+            using ApplicationDbContext dbContext = GetDbContextService();
 
             bool isNewClient = await IsNewClientAsync(clientInfo, dbContext);
             if (isNewClient) return await CreateNewClientAsync(clientInfo, dbContext: dbContext);
             else return await GetClientAsync(clientInfo, dbContext);
-
         }
     }   
 }

@@ -42,10 +42,11 @@ namespace WsClient
 
         public async Task Invoke()
         {
-            Commands.TryDequeue(out Script? script);
+            bool dequed = Commands.TryDequeue(out Script? script);
             // Get Type of command.Shell with reflection
             /* If for any reason there is no command retrieved from queue (should not happen), this will throw an exception
                 which will be handled lower by the caller */
+            if (!dequed) return;
             Type objectType = (from asm in AppDomain.CurrentDomain.GetAssemblies()
                                from type in asm.GetTypes()
                                where type.IsClass && type.Name == script.Shell.ToString()
