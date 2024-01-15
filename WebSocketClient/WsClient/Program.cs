@@ -68,13 +68,10 @@ namespace WsClient
         {
             try
             {
-                await Task.Run(async () =>
-                {
-                    await _pipeline.Invoke();
-                    //Exceptions should be handled in Invoke()
-                    _pipeline.GetCommandResult(out ScriptResult? result);
-                    if (result != null)await _client.Send(result);
-                });
+                await _pipeline.Invoke();
+                //Exceptions should be handled in Invoke()
+                _pipeline.GetCommandResult(out ScriptResult? result);
+                if (result != null) await _client.Send(result);
             }
             catch (Exception ex)
             {

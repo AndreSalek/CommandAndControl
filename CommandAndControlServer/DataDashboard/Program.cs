@@ -38,7 +38,7 @@ namespace DataDashboard
             builder.Services.AddScoped<ILogger, Logger<AccountController>>();
             // Clients represent the 'endpoints' that are connected to the server through websocket
             builder.Services.AddScoped<ILogger, Logger<ClientController>>();
-            builder.Services.AddSingleton<ClientService>();
+            builder.Services.AddSingleton<IClientService, ClientService>();
             // TODO: EmailSender service implementation
             // TODO: Encrypted communication via SSL
             //Add global AntiForgeryToken filter
