@@ -106,10 +106,11 @@ namespace DataDashboard.Controllers
                     if (o.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
                     {
                         if (o.NewItems == null) return;
+
                         foreach (var item in o.NewItems)
                         {
                             _logger.LogInformation($"Writing script result from {client.Id} to database");
-                            await _clientService.SaveScriptResult(item as ScriptResult);   
+                            await _clientService.SaveScriptResult((ScriptResult)item);   
                         }
                     }
                 };

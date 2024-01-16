@@ -34,46 +34,59 @@ namespace DataDashboard.Controllers
             _signInManager = signInManager;
             _logger = logger;
         }
-        //GET METHODS
-        public async Task<IActionResult> Login()
+        // GET METHODS
+        public IActionResult Login()
         {
-            if (_signInManager.IsSignedIn(User)) return RedirectToAction("Index", "Bot");
+            if (_signInManager.IsSignedIn(User)) return RedirectToAction("Index", "Client");
             return View(new LoginViewModel());
         }
-        [HttpPost]
-        public async Task<IActionResult> Login(LoginViewModel model, string returnUrl = null)
+        public IActionResult Register()
         {
-            returnUrl ??= Url.Content("/Bot/Index");
-            //`LoginViewModel` matches verification attributes
-            if (ModelState.IsValid)
+            if (_signInManager.IsSignedIn(User)) return RedirectToAction("Index", "Client");
+            return View(new RegisterViewModel());
+        }
+        public IActionResult ForgotPassword() => View(new ResetPasswordViewModel());
+        public IActionResult Lockout() => View();
+
+        // POST METHODS
+        [HttpPost]
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = default)
+        {
+            returnUrl ??= Url.Content("/Client/Index");
+
+            // Login attempt failed
+            if (ModelState == null || !ModelState.IsValid) return View(model);
+
+            IdentityUser? identity = await _userManager.FindByNameAsync(model.UserName);
+            Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
+            
+            if (identity == null)
             {
-                IdentityUser identity = await _userManager.FindByNameAsync(model.UserName);
-                Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
-                if (result.Succeeded)
-                {
-                    _userManager.ResetAccessFailedCountAsync(identity);
-                    _logger.LogInformation("User logged in.");
-                    return LocalRedirect(returnUrl);
-                }
-                if (result.IsLockedOut)
-                {
-                    _logger.LogWarning("User account locked out.");
-                    return LocalRedirect("Lockout");
-                }
-                else
-                {
-                    if (identity != null) await _userManager.AccessFailedAsync(identity);
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return View(model);
-                }
+                // return user not found error
+                return View(model);
             }
-            //_userManager.AccessFailedAsync(model.UserName);
-            // If we got this far, something failed, redisplay form
-            return View(model);
+            if (result.Succeeded)
+            {
+                await _userManager.ResetAccessFailedCountAsync(identity);
+                _logger.LogInformation("User logged in.");
+                return LocalRedirect(returnUrl);
+            }
+            if (result.IsLockedOut)
+            {
+                _logger.LogWarning("User account locked out.");
+                return LocalRedirect("Lockout");
+            }
+            else
+            {
+                if (identity != null) await _userManager.AccessFailedAsync(identity);
+                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                return View(model);
+            }
+            
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null)
+        public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = default)
         {
             returnUrl ??= Url.Content("/Account/Login");
             if (ModelState.IsValid)
@@ -96,26 +109,21 @@ namespace DataDashboard.Controllers
 
             return View(model);
         }
-        public async Task<IActionResult> Register()
-        {
-            if (_signInManager.IsSignedIn(User)) return RedirectToAction("Index", "Bot");
-            return View(new RegisterViewModel());
-        }
-        public async Task<IActionResult> ForgotPassword() => View(new ResetPasswordViewModel());
-        public async Task<IActionResult> Lockout() => View();
+
 
         //TODO: Implement password reset
         [HttpPost]
-        public async Task<IActionResult> ForgotPassword(ResetPasswordViewModel model)
+        public IActionResult ForgotPassword(ResetPasswordViewModel model)
         {
             //Implement password reset
             //_userManager.ResetPasswordAsync();
             return View(new ResetPasswordViewModel());
         }
         [HttpPost]
-        public async Task<IActionResult> Logout(string returnUrl = null)
+        public async Task<IActionResult> Logout(string? returnUrl = default)
         {
             await _signInManager.SignOutAsync();
+            returnUrl ??= Url.Content("/Account/Login");
             return LocalRedirect(returnUrl);
         }
 

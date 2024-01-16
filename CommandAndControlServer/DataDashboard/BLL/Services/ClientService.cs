@@ -20,10 +20,12 @@ namespace DataDashboard.BLL.Services
     {
         private ConcurrentDictionary<Client, WebSocket> _connectedClients = new ConcurrentDictionary<Client, WebSocket>();
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private System.Timers.Timer _timer;
+        private System.Timers.Timer _timer = default!; // Timer is initialized in SetTimer() - constructor
         private double _timerInterval = 5000;
+        private ILogger<IClientService> _logger;
         // To retrieve scoped/transient services. In this case database context
         private IServiceProvider _provider;
+
         public CancellationToken CancellationToken { get => _cancellationTokenSource.Token; }
         public ConcurrentObservableCollection<Script> ClientScripts { get; } = new ConcurrentObservableCollection<Script>();
         public ConcurrentObservableCollection<ScriptResult> ScriptResults { get; } = new ConcurrentObservableCollection<ScriptResult>();
@@ -34,9 +36,10 @@ namespace DataDashboard.BLL.Services
                 return _connectedClients.AsReadOnly();
             }
         }
-        public ClientService(IServiceProvider provider)
+        public ClientService(IServiceProvider provider, ILogger<IClientService> logger)
         {
             _provider = provider;
+            _logger = logger;
             SetTimer();
         }
 
@@ -50,8 +53,9 @@ namespace DataDashboard.BLL.Services
                 _timer.Enabled = true;
                 _timer.Start();
             }
-            catch(System.Exception exceptions)
+            catch(System.Exception exception)
             {
+                _logger.LogError(exception, "Handler failed while cleaning collections");
                 // Reset timer if it fails for any reason
                 _timer.Stop();
                 _timer.Dispose();
@@ -59,6 +63,7 @@ namespace DataDashboard.BLL.Services
             }
         }
 
+        // This gets executed on ThreadPool
         private async Task CollectionCleaner(object? sender, ElapsedEventArgs e)
         {
         // This service cannot block the main thread, so delegate it to ThreadPool
@@ -77,6 +82,11 @@ namespace DataDashboard.BLL.Services
                     }
                 };
             });
+        }
+        ~ClientService()
+        {
+            _timer.Stop();
+            _timer.Dispose();
         }
 
         public bool AddConnectedClient(Client client, WebSocket webSocket) =>

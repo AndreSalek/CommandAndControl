@@ -7,7 +7,7 @@ namespace DataDashboard.Controllers.Account
     public partial class AccountController : Controller
     {
         [Route("{controller}/Manage/Index")]
-        public async Task<IActionResult> ProfileSettings()
+        public IActionResult ProfileSettings()
         {
             return View("Manage/Index");
         }
