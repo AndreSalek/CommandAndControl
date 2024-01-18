@@ -71,7 +71,7 @@ namespace DataDashboard.BLL.Services
             { 
                 // This can technically be handled inside the handler that adds ScriptResults to collection, but I think this is better, mainly because of Single Responsibility Principle
                 if (ClientScripts.Count() == 0 && ScriptResults.Count() == 0) return;
-                foreach (var script in ClientScripts)
+                foreach (var script in ClientScripts.ToList())
                 {
                     var results = ScriptResults.Where(result => result.CommandId == script.Id).ToList();
                     // If results from all clients are in the ScriptResults, remove these instances with corresponding Script.id from both collections
@@ -94,76 +94,6 @@ namespace DataDashboard.BLL.Services
         public bool RemoveConnectedClient(Client client) =>
             _connectedClients.TryRemove(client, out _);
 
-        private ApplicationDbContext GetDbContextService()
-        {
-            var scope = _provider.CreateScope();
-            return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        }
-
-        /// <summary>
-        /// Checks if client is new by comparing MAC address
-        /// </summary>
-        public async Task<bool> IsNewClientAsync(ClientHwInfo hwInfo, ApplicationDbContext? dbContext = default)
-        {
-            // TODO: More complex new client check (Based on more info)
-            if (dbContext == null) dbContext = GetDbContextService();
-            return await dbContext.HwInfo.SingleOrDefaultAsync(dbInfo => dbInfo.MAC == hwInfo.MAC) == null ? true : false;
-        }
-        /// <summary>
-        /// Creates new client and writes it with ClientHwInfo to database
-        /// </summary>
-        public async Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "", ApplicationDbContext? dbContext = default)
-        {
-            if (dbContext == null) dbContext = GetDbContextService();
-
-            // Create client and write it to database, Id is generated there
-            var client = new Client()
-            {
-                Name = clientName,
-            };
-            EntityEntry<Client> record = await dbContext.AddAsync(client);
-
-            // Retrieve client Id from the entry and add it as primary key for ClientHwInfo
-            clientInfo.Id = record.Property(prop => prop.Id).CurrentValue;
-            await dbContext.HwInfo.AddAsync(clientInfo);
-            var dbSave = dbContext.SaveChangesAsync();
-
-            Client result = record.Entity;
-            result.clientHwInfo = clientInfo;
-            await dbSave;
-            return result;
-        }
-
-        /// <summary>
-        /// Retrieves all information about client from database
-        /// </summary>
-        public async Task<Client> GetClientAsync(ClientHwInfo clientInfo, ApplicationDbContext? dbContext = default)
-        {
-            if (dbContext == null) dbContext = GetDbContextService();
-
-            // There is probably better way to do this, but this is fine
-            var info = await dbContext.HwInfo.SingleAsync(db => db.MAC == clientInfo.MAC);
-            var client = await dbContext.Clients.SingleAsync(db => db.Id == info.Id);
-            client.clientHwInfo = info;
-            await dbContext.Entry(client).Collection(info => info.SessionsHistory).LoadAsync();
-            return client;
-        }
-
-        /// <summary>
-        /// Retrieves client from database, if it does not exist, creates new one and writes ClientHwInfo to database
-        /// </summary>
-        public async Task<Client> GetCompleteClientAsync(ClientHwInfo clientInfo)
-        {
-            using ApplicationDbContext dbContext = GetDbContextService();
-
-            bool isNewClient = await IsNewClientAsync(clientInfo, dbContext);
-            if (isNewClient) return await CreateNewClientAsync(clientInfo, dbContext: dbContext);
-            else return await GetClientAsync(clientInfo, dbContext);
-        }
-
-        public async Task SaveScriptResult(ScriptResult scriptResult)
-        {
-            throw new NotImplementedException();
-        }
+        
     }
 }

@@ -12,8 +12,9 @@ namespace DataDashboard.Models
     public class Client
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public ClientHwInfo clientHwInfo { get; set; }
-        public IList<SessionData> SessionsHistory { get; set; }
+        public string Name { get; set; } = default!;
+        public DateTime Created { get; set; }
+        public ClientHwInfo ClientHwInfo { get; set; } = default!;
+        public ICollection<ConnectionData> ConnectionHistory { get; set; } = default!;
     }
 }

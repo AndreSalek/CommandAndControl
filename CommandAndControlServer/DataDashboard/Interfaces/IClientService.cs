@@ -15,10 +15,6 @@ namespace DataDashboard.BLL.Services
         CancellationToken CancellationToken { get; }
         bool AddConnectedClient(Client client, WebSocket webSocket);
         bool RemoveConnectedClient(Client client);
-        Task<Client> CreateNewClientAsync(ClientHwInfo clientInfo, string clientName = "", ApplicationDbContext? dbContext = default);
-        Task<Client> GetClientAsync(ClientHwInfo clientInfo, ApplicationDbContext ?dbContext = default);
-        Task<bool> IsNewClientAsync(ClientHwInfo hwInfo, ApplicationDbContext? dbContext = default);
-        Task<Client> GetCompleteClientAsync(ClientHwInfo clientInfo);
-        Task SaveScriptResult(ScriptResult scriptResult);
+
     }
 }

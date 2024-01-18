@@ -25,7 +25,7 @@ namespace DataDashboard.Controllers
     {
         private readonly ILogger<ClientController> _logger;
         private readonly IClientService _clientService;
-        public ClientController(ILogger<ClientController> logger, ClientService clientService)
+        public ClientController(ILogger<ClientController> logger, IClientService clientService)
         {
             _logger = logger;
             _clientService = clientService;
@@ -33,7 +33,7 @@ namespace DataDashboard.Controllers
         [AllowAnonymous]
         public IActionResult Index()
         {
-            _clientService.ClientScripts.AddRange(SeedData());
+            //_clientService.ClientScripts.AddRange(SeedData());
             return View();
         }
 
@@ -82,8 +82,8 @@ namespace DataDashboard.Controllers
                 // Authenticate client and add it to connected clients
                 ClientHwInfo info = await CommunicationManager.ReceiveDataAsync<ClientHwInfo>(webSocket) ?? throw new WebSocketException("Connection closed.");
                 _logger.LogInformation($"Client connected: {info.MAC}");
-                client = await _clientService.GetCompleteClientAsync(info);
-                _clientService.AddConnectedClient(client, webSocket);
+                //ient = await _clientService.GetCompleteClientAsync(info);
+                //_clientService.AddConnectedClient(client, webSocket);
 
                 // Creating anonymous handlers because I need WebSocket instance to send the script to client
                 // Othewise I'd need to iterate through ConnectedClients Dictionary to do the same thing (which also needs IClientService reference)
@@ -110,7 +110,7 @@ namespace DataDashboard.Controllers
                         foreach (var item in o.NewItems)
                         {
                             _logger.LogInformation($"Writing script result from {client.Id} to database");
-                            await _clientService.SaveScriptResult((ScriptResult)item);   
+                            //await _clientService.SaveScriptResult((ScriptResult)item);   
                         }
                     }
                 };
@@ -133,7 +133,7 @@ namespace DataDashboard.Controllers
                         else
                         {
                             _logger.LogInformation($"Script result: \r\n" +
-                                                   $"Client: {client.Id} , MAC: {client.clientHwInfo.MAC} \r\n" + 
+                                                   //$"Client: {client.Id} , MAC: {client.clientHwInfo.MAC} \r\n" + 
                                                    $"Returned result for script Id {scriptResult.CommandId}: " +
                                                    $"{scriptResult.Content}");
                             // Add result to collection

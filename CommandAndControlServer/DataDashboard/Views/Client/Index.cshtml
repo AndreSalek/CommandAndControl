@@ -1,8 +1,37 @@
-﻿@{
-	ViewData["Title"] = "Trusted Relays";
+﻿@* Just assign the ViewData Title in corresponding controller action later *@
+@{
+	ViewData["Title"] = "Connected Clients";
 }
+@inject DataDashboard.BLL.Services.ClientService Clients
 <div class="container h-100 d-flex justify-content-center">
-    
-        <h1 class="display-3">Trusted Relays</h1>
+    <h1 class="display-5">Connected Clients</h1>
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>Client ID</th>
+					<th>Client Name</th>
+					<th>Client IP</th>
+					<th>Client OS</th>
+					<th>Client Version</th>
+					<th>Client Status</th>
+					<th>Client Last Seen</th>
+				</tr>
+			</thead>
+			<tbody>
+				@* @foreach (var client in ConnectedClients)
+				{
+					<tr>
+						<td>@client.ClientId</td>
+						<td>@client.ClientName</td>
+						<td>@client.ClientIp</td>
+						<td>@client.ClientOs</td>
+						<td>@client.ClientVersion</td>
+						<td>@client.ClientStatus</td>
+						<td>@client.ClientLastSeen</td>
+					</tr>
+				} *@
+			</tbody>
+		</table>
+        
    
 </div>

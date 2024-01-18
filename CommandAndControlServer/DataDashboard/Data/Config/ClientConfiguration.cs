@@ -14,12 +14,15 @@ namespace DataDashboard.Data.Config
                 .HasMaxLength(256)
                 .IsRequired(false);
 
-            builder.HasOne(c => c.clientHwInfo) // One to one relationship with ClientHwInfo
+            builder.Property(c => c.Created)
+                .IsRequired();
+
+            builder.HasOne(c => c.ClientHwInfo) // One to one relationship with ClientHwInfo
                 .WithOne()
                 .HasForeignKey<ClientHwInfo>(c => c.Id)
                 .IsRequired();
 
-            builder.HasMany(c => c.SessionsHistory) //One to many relationship with SessionData
+            builder.HasMany(c => c.ConnectionHistory) //One to many relationship with SessionData
                 .WithOne()
                 .HasForeignKey(c => c.ClientId)
                 .IsRequired();

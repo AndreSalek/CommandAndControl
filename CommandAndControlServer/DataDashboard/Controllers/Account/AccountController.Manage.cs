@@ -6,7 +6,7 @@ namespace DataDashboard.Controllers.Account
     [Authorize]
     public partial class AccountController : Controller
     {
-        [Route("{controller}/Manage/Index")]
+        [HttpGet("{controller}/Manage/Index")]
         public IActionResult ProfileSettings()
         {
             return View("Manage/Index");
