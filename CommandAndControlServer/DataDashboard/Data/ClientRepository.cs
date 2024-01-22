@@ -27,13 +27,10 @@ namespace DataDashboard.Data
 		/// <summary>
 		/// Creates new client with ClientHwInfo and saves it to database
 		/// </summary>
-		public async Task<Client> CreateClientAsync(ClientHwInfo clientInfo, string clientName = "")
+		public async Task<Client> CreateClientAsync(ClientHwInfo clientInfo)
 		{
 			// Create client and write it to database, Id is generated there
-			var client = new Client()
-			{
-				Name = clientName,
-			};
+			var client = new Client();
 			EntityEntry<Client> record = await _context.AddAsync(client);
 
 			// Retrieve client Id from the entry and add it as primary key for ClientHwInfo
@@ -50,43 +47,44 @@ namespace DataDashboard.Data
 		/// <summary>
 		/// Retrieves Client from database
 		/// </summary>
-		//public async Task<Client> GetClientAsync(ClientHwInfo clientInfo) => await _context.Clients.SingleAsync(db => db.Id == clientInfo.Id);
-		public async Task<Client> GetClientAsync(ClientHwInfo clientInfo)
+		public async Task<Client> GetClientAsync(ClientHwInfo clientInfo) => await _context.Clients.SingleAsync(db => db.Id == clientInfo.Id);
+
+		public Task<ScriptResult> GetScriptResultAsync(int id)
 		{
 			throw new NotImplementedException();
 		}
 
-		public async Task SaveScriptResult(ScriptResult scriptResult)
+		public Task<IEnumerable<Client>> GetAllClientsAsync()
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task<Client> GetClient(ClientHwInfo clientInfo)
+		public Task<IEnumerable<ScriptResult>> GetAllScriptResultsAsync()
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task<Client> SaveClient(ClientHwInfo clientInfo, string clientName = "")
+		public Task<Client> SaveClientAsync(ClientHwInfo clientInfo)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task UpdateClient(Client client)
+		public Task SaveScriptResultAsync(ScriptResult scriptResult)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task DeleteClient(int id)
+		public Task UpdateClientAsync(Client client)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task DeleteScriptResult(int id)
+		public Task DeleteClientAsybc(int id)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task<bool> IsNewClient(ClientHwInfo clientInfo)
+		public Task DeleteScriptResultAsync(int id)
 		{
 			throw new NotImplementedException();
 		}

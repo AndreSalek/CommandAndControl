@@ -8,7 +8,7 @@ namespace DataDashboard.Interfaces
         Task<ScriptResult> GetScriptResultAsync(int id);
         Task<IEnumerable<Client>> GetAllClientsAsync();
         Task<IEnumerable<ScriptResult>> GetAllScriptResultsAsync();
-        Task<Client> SaveClientAsync(ClientHwInfo clientInfo);
+        Task<Client> CreateClientAsync(ClientHwInfo clientInfo);
         Task SaveScriptResultAsync(ScriptResult scriptResult);
 
         Task UpdateClientAsync(Client client);

@@ -9,12 +9,14 @@ namespace DataDashboard.BLL.Services
 {
     public interface IClientService
     {
-        IReadOnlyDictionary<Client, WebSocket> ConnectedClients { get; }
-        ConcurrentObservableCollection<Script> ClientScripts { get; }
-        ConcurrentObservableCollection<ScriptResult> ScriptResults { get; }
-        CancellationToken CancellationToken { get; }
-        bool AddConnectedClient(Client client, WebSocket webSocket);
-        bool RemoveConnectedClient(Client client);
-
+        /// <summary>
+        /// Holds connected clients by their unique id
+        /// </summary>
+        ConcurrentBag<int> ConnectedClients { get; }
+        /// <summary>
+        /// Completes when script was chosen by user to send to client
+        /// </summary>
+		public TaskCompletionSource<Script> ScriptToExecute { get; }
+		CancellationToken CancellationToken { get; }
     }
 }
