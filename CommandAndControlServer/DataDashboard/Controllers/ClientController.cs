@@ -2,12 +2,15 @@
 using DataDashboard.BLL.Services;
 using DataDashboard.Data;
 using DataDashboard.Helpers;
+using DataDashboard.Interfaces;
 using DataDashboard.Models;
 using DataDashboard.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Scaffolding.Shared;
+using NuGet.Packaging;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -22,16 +25,40 @@ namespace DataDashboard.Controllers
     public class ClientController : Controller
     {
         private readonly ILogger<ClientController> _logger;
-        private readonly ClientService _clientService;
-        public ClientController(ILogger<ClientController> logger, ClientService clientService)
+		private readonly IClientRepository _repository;
+		private readonly IClientService _clientService;
+        public ClientController(ILogger<ClientController> logger, IClientService clientService, IClientRepository repository)
         {
             _logger = logger;
+            _repository = repository;
             _clientService = clientService;
         }
         [AllowAnonymous]
-        public async Task<ActionResult> Index()
+        public IActionResult Index()
         {
+            //_clientService.ClientScripts.AddRange(SeedData());
             return View();
+        }
+
+        private IEnumerable<Script> SeedData()
+        {
+            // Test
+            // TODO: Add script into database and then add it to collection
+            return new Script[]
+            {
+                new Script()
+                {
+                    Id = 1,
+                    Lines = new string[] { "Write-Output Hello World!" },
+                    Shell = ShellType.PowerShell
+                },
+                new Script()
+                {
+                    Id = 2,
+                    Lines = new string[] { "echo Hello World!" },
+                    Shell = ShellType.PowerShell
+                }
+            };
         }
 
         [Route("{controller}/ws")]
@@ -47,33 +74,55 @@ namespace DataDashboard.Controllers
             string closeReason = "Closing";
             WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure;
 
+            // Declare variables outside try block so they can be used in finally block
             WebSocket webSocket = default!;
-            Client client = default!;
+            int clientId = default;
             try
             {
                 webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 // Authenticate client and add it to connected clients
                 ClientHwInfo info = await CommunicationManager.ReceiveDataAsync<ClientHwInfo>(webSocket) ?? throw new WebSocketException("Connection closed.");
-                client = await _clientService.GetCompleteClientAsync(info);
-                _clientService.AddConnectedClient(client, webSocket);
+                _logger.LogInformation($"Client connected: {info.MAC}");
 
-                while (!_clientService.cancellationToken.IsCancellationRequested || webSocket.State == WebSocketState.Open)
+				Client client = default!;
+				bool isNewClient = await _repository.IsNewClientAsync(info);
+                if(isNewClient)
+                {
+					_logger.LogInformation($"Client is new, creating new record");
+					client = await _repository.CreateClientAsync(info);
+				}
+				else
+                {
+					_logger.LogInformation($"Client is not new, retrieving record");
+					client = await _repository.GetClientAsync(info);
+				}
+                clientId = client.Id;
+                //ient = await _repository.GetCompleteClientAsync(info);
+                _clientService.ConnectedClients.Add(clientId);
+
+                // Cancellation token will be cancelled when server is shut down
+                // This is main loop for websocket communication
+                while (!_clientService.CancellationToken.IsCancellationRequested || webSocket.State == WebSocketState.Open)
                 {
                     try
                     {
-
-                        // retrieve script from collection
-                        // Send script to client
-                        Script script = new Script()
-                        {
-                            Id = 1,
-                            Lines = new string[] { "Write-Output Hello World!" },
-                            Shell = ShellType.PowerShell
-                        };
+                        Script script = await _clientService.ScriptToExecute.Task;
                         await CommunicationManager.Send(script, webSocket);
-
-                        ScriptResult scriptResult = await CommunicationManager.ReceiveDataAsync<ScriptResult>(webSocket) ?? throw new WebSocketException("Connection closed.");
-                        _logger.LogInformation($"Script result: {scriptResult.Content}");
+                        // Always listen for script results
+                        ScriptResult? scriptResult = await CommunicationManager.ReceiveDataAsync<ScriptResult>(webSocket);
+                        // Connection closed
+                        if (scriptResult == null) { break;}
+                        // Result received
+                        else
+                        {
+                            _logger.LogInformation($"Script result: \r\n" +
+                                                   $"Client: {client.Id} , MAC: {client.ClientHwInfo.MAC} \r\n" + 
+                                                   $"Returned result for script Id {scriptResult.CommandId}: " +
+                                                   $"{scriptResult.Content}");
+                            // Add result to collection
+                            scriptResult.ClientId = client.Id;
+                            await _repository.SaveScriptResultAsync(scriptResult);
+                        }
                     }
                     catch (InvalidDataException dataException)
                     {
@@ -107,14 +156,14 @@ namespace DataDashboard.Controllers
             }
             finally
             {
+                //Checking statuses in case something unexpected happens, so there is no exception in finally block
                 if (webSocket.State == WebSocketState.Open)
                 {
                     await webSocket.CloseAsync(closeStatus, closeReason, CancellationToken.None);
                     webSocket.Dispose();
                 }
-                _clientService.RemoveConnectedClient(client);
+                _clientService.ConnectedClients.TryTake(out _);
             }
         }
-        
     }
 }

@@ -24,6 +24,7 @@ namespace DataDashboard.Helpers
         /// Listens for data from server and attempts to deserialize it to `T` type
         /// </summary>
         /// <returns>Deserialized data of type `T` or null if close frame is received</returns>
+        /// <exception cref="InvalidDataException">Thrown when received data cannot be deserialized to type T</exception>"
         public static async Task<T?> ReceiveDataAsync<T>(WebSocket webSocket)
         {
             WebSocketReceiveResult wsReceiveResult;

@@ -32,6 +32,7 @@ namespace WsClient.Handlers
             if (_shellProcess == null)
                 throw new InvalidOperationException("Instance of the process is not created.");
 
+            _commandId = script.Id;
             // Write script lines to a file
             _scriptPath = Directory.GetCurrentDirectory() + @"\script" + script.Id.ToString() + ".ps1";
             if (File.Exists(_scriptPath)) File.Delete(_scriptPath);
@@ -52,8 +53,7 @@ namespace WsClient.Handlers
             string stdOut = _shellProcess.StandardOutput.ReadToEnd();
             string stdErr = _shellProcess.StandardError.ReadToEnd();
 
-            await // Wait for the process to exit
-            _shellProcess.WaitForExitAsync();
+            await _shellProcess.WaitForExitAsync();
 
             // Free process resources
             _shellProcess.Dispose();

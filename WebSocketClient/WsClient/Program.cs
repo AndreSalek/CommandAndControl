@@ -60,21 +60,16 @@ namespace WsClient
                 Trace.WriteLine("Invalid operation exception: " + opException.Message + "\r\n" +
                                         opException.Data);
             }
-
-            Trace.WriteLine("Close value: " + _client.CloseStatus.Value);
         }
         // Execute command and send result back to server on ThreadPoool thread, so main thread can continue listening
         private static async void CommandQueuedHandler(object? sender, EventArgs e)
         {
             try
             {
-                await Task.Run(async () =>
-                {
-                    await _pipeline.Invoke();
-                    //Exceptions should be handled in Invoke()
-                    _pipeline.GetCommandResult(out ScriptResult? result);
-                    if (result != null)await _client.Send(result);
-                });
+                await _pipeline.Invoke();
+                //Exceptions should be handled in Invoke()
+                _pipeline.GetCommandResult(out ScriptResult? result);
+                if (result != null) await _client.Send(result);
             }
             catch (Exception ex)
             {
