@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Scaffolding.Shared;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NuGet.Packaging;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -25,13 +27,13 @@ namespace DataDashboard.Controllers
     public class ClientController : Controller
     {
         private readonly ILogger<ClientController> _logger;
-		private readonly IClientRepository _repository;
-		private readonly IClientService _clientService;
-        public ClientController(ILogger<ClientController> logger, IClientService clientService, IClientRepository repository)
+        private readonly ApplicationDbContext _context;
+        private readonly IClientService _clientService;
+        public ClientController(ILogger<ClientController> logger, IClientService clientService, ApplicationDbContext context)
         {
             _logger = logger;
-            _repository = repository;
             _clientService = clientService;
+            _context = context;
         }
         [AllowAnonymous]
         public IActionResult Index()
@@ -84,19 +86,21 @@ namespace DataDashboard.Controllers
                 ClientHwInfo info = await CommunicationManager.ReceiveDataAsync<ClientHwInfo>(webSocket) ?? throw new WebSocketException("Connection closed.");
                 _logger.LogInformation($"Client connected: {info.MAC}");
 
-				Client client = default!;
-				bool isNewClient = await _repository.IsNewClientAsync(info);
-                if(isNewClient)
+				bool isNewClient = await _context.HwInfo.SingleOrDefaultAsync(dbInfo => dbInfo.MAC == info.MAC) == null ? true : false;
+                if (isNewClient)
                 {
 					_logger.LogInformation($"Client is new, creating new record");
-					client = await _repository.CreateClientAsync(info);
-				}
-				else
-                {
-					_logger.LogInformation($"Client is not new, retrieving record");
-					client = await _repository.GetClientAsync(info);
-				}
-                clientId = client.Id;
+                    var client = new Client();
+                    EntityEntry<Client> record = await _context.Clients.AddAsync(client);
+
+                    // Retrieve client Id from the entry and add it as primary key for ClientHwInfo
+                    //clientInfo.Id = record.Property(prop => prop.Id).CurrentValue;
+                    await _context.HwInfo.AddAsync(info);
+                    var dbSave = _context.SaveChangesAsync();
+                }
+                clientId = _context.Clients.Single(client => client.ClientHwInfo.MAC == info.MAC).Id;
+
+                //clientId = client.Id;
                 //ient = await _repository.GetCompleteClientAsync(info);
                 _clientService.ConnectedClients.Add(clientId);
 
@@ -113,16 +117,14 @@ namespace DataDashboard.Controllers
                         // Connection closed
                         if (scriptResult == null) { break;}
                         // Result received
-                        else
-                        {
-                            _logger.LogInformation($"Script result: \r\n" +
-                                                   $"Client: {client.Id} , MAC: {client.ClientHwInfo.MAC} \r\n" + 
-                                                   $"Returned result for script Id {scriptResult.CommandId}: " +
-                                                   $"{scriptResult.Content}");
-                            // Add result to collection
-                            scriptResult.ClientId = client.Id;
-                            await _repository.SaveScriptResultAsync(scriptResult);
-                        }
+                        _logger.LogInformation($"Script result: \r\n" +
+                                                $"Returned result for script Id {scriptResult.CommandId}: " +
+                                                $"{scriptResult.Content}");
+                        // Add result to collection
+                        scriptResult.ClientId = clientId;
+                        //await _context.ScriptResults.Add(scriptResult);
+
+                        
                     }
                     catch (InvalidDataException dataException)
                     {
