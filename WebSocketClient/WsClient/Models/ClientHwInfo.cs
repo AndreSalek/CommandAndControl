@@ -12,6 +12,6 @@ namespace WsClient.Models
         public string MAC { get; set; }
         public string OS { get; set; }
         public string CpuId { get; set; }
-        public int RAMCapacity { get; set; }
+        public string RAMCapacity { get; set; }
     }
 }
