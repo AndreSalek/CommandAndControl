@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -16,7 +17,8 @@ namespace DataDashboard.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true)
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -31,7 +33,7 @@ namespace DataDashboard.Migrations
                     MAC = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     OS = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     CpuId = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    RAMCapacity = table.Column<int>(type: "int", nullable: true)
+                    RAMCapacity = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -51,7 +53,9 @@ namespace DataDashboard.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ClientId = table.Column<int>(type: "int", nullable: false),
-                    SessionId = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    ConnectionId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IP = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
+                    ConnectedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {

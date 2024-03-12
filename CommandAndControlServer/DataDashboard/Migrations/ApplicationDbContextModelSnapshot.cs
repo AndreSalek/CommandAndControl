@@ -60,8 +60,9 @@ namespace DataDashboard.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<int?>("RAMCapacity")
-                        .HasColumnType("int");
+                    b.Property<string>("RAMCapacity")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 

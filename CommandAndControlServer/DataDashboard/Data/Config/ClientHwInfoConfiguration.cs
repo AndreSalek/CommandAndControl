@@ -23,6 +23,7 @@ namespace DataDashboard.Data.Config
                 .IsRequired(false);
 
             builder.Property(ci => ci.RAMCapacity)
+                .HasMaxLength(256)
                 .IsRequired(false);
         }
     }

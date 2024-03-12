@@ -10,6 +10,6 @@ namespace DataDashboard.Models
         public string MAC { get; set; } = default!;
         public string? OS { get; set; }
         public string? CpuId { get; set; }
-        public int? RAMCapacity { get; set; } 
+        public string? RAMCapacity { get; set; } 
     }
 }
