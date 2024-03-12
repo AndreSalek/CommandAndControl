@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20231227214414_ClientMigration")]
+    [Migration("20240312100640_ClientMigration")]
     partial class ClientMigration
     {
         /// <inheritdoc />
@@ -32,6 +32,9 @@ namespace DataDashboard.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
@@ -60,15 +63,16 @@ namespace DataDashboard.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<int?>("RAMCapacity")
-                        .HasColumnType("int");
+                    b.Property<string>("RAMCapacity")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
                     b.ToTable("HwInfo");
                 });
 
-            modelBuilder.Entity("DataDashboard.Models.SessionData", b =>
+            modelBuilder.Entity("DataDashboard.Models.ConnectionData", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -79,9 +83,17 @@ namespace DataDashboard.Migrations
                     b.Property<int>("ClientId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SessionId")
+                    b.Property<DateTime>("ConnectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConnectionId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IP")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.HasKey("Id");
 
@@ -295,16 +307,16 @@ namespace DataDashboard.Migrations
             modelBuilder.Entity("DataDashboard.Models.ClientHwInfo", b =>
                 {
                     b.HasOne("DataDashboard.Models.Client", null)
-                        .WithOne("clientHwInfo")
+                        .WithOne("ClientHwInfo")
                         .HasForeignKey("DataDashboard.Models.ClientHwInfo", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("DataDashboard.Models.SessionData", b =>
+            modelBuilder.Entity("DataDashboard.Models.ConnectionData", b =>
                 {
                     b.HasOne("DataDashboard.Models.Client", null)
-                        .WithMany("SessionsHistory")
+                        .WithMany("ConnectionHistory")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -363,10 +375,10 @@ namespace DataDashboard.Migrations
 
             modelBuilder.Entity("DataDashboard.Models.Client", b =>
                 {
-                    b.Navigation("SessionsHistory");
-
-                    b.Navigation("clientHwInfo")
+                    b.Navigation("ClientHwInfo")
                         .IsRequired();
+
+                    b.Navigation("ConnectionHistory");
                 });
 #pragma warning restore 612, 618
         }

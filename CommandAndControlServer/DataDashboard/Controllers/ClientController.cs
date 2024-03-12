@@ -92,11 +92,12 @@ namespace DataDashboard.Controllers
 					_logger.LogInformation($"Client is new, creating new record");
                     var client = new Client();
                     EntityEntry<Client> record = await _context.Clients.AddAsync(client);
-
+                    await _context.SaveChangesAsync();
+                    info.Id = record.Entity.Id;
                     // Retrieve client Id from the entry and add it as primary key for ClientHwInfo
                     //clientInfo.Id = record.Property(prop => prop.Id).CurrentValue;
                     await _context.HwInfo.AddAsync(info);
-                    var dbSave = _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
                 }
                 clientId = _context.Clients.Single(client => client.ClientHwInfo.MAC == info.MAC).Id;
 
