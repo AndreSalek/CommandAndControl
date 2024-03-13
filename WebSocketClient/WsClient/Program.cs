@@ -15,12 +15,12 @@ namespace WsClient
         private static Client _client = new Client();
         static async Task Main(string[] args)
         {
-            string host = "127.0.0.1";
-            string port = "5101";
+            string host = "localhost";
+            string port = "7131";
             string path = "/Client/ws";
 
             // TODO: Secure websocket connection
-            Uri serverUri = new Uri($"ws://{host}:{port}{path}");
+            Uri serverUri = new Uri($"wss://{host}:{port}{path}");
             try
             {
                 _pipeline.CommandQueued += CommandQueuedHandler;
