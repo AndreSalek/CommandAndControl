@@ -16,5 +16,6 @@ namespace DataDashboard.Models
         public DateTime Created { get; set; }
         public virtual ClientHwInfo ClientHwInfo { get; set; } = default!;
         public virtual ICollection<ConnectionData> ConnectionHistory { get; set; } = default!;
+        public virtual ICollection<ScriptResult> ScriptResults { get; set; } = default!;
     }
 }

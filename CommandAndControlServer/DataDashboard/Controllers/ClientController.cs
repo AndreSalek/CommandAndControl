@@ -2,7 +2,6 @@
 using DataDashboard.BLL.Services;
 using DataDashboard.Data;
 using DataDashboard.Helpers;
-using DataDashboard.Interfaces;
 using DataDashboard.Models;
 using DataDashboard.Utility;
 using Microsoft.AspNetCore.Authorization;
@@ -28,8 +27,8 @@ namespace DataDashboard.Controllers
     {
         private readonly ILogger<ClientController> _logger;
         private readonly ApplicationDbContext _context;
-        private readonly IClientService _clientService;
-        public ClientController(ILogger<ClientController> logger, IClientService clientService, ApplicationDbContext context)
+        private readonly ClientService _clientService;
+        public ClientController(ILogger<ClientController> logger, ClientService clientService, ApplicationDbContext context)
         {
             _logger = logger;
             _clientService = clientService;
@@ -38,7 +37,6 @@ namespace DataDashboard.Controllers
         [AllowAnonymous]
         public IActionResult Index()
         {
-            //_clientService.ClientScripts.AddRange(SeedData());
             return View();
         }
 

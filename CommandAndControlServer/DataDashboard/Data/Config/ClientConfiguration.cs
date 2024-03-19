@@ -26,6 +26,11 @@ namespace DataDashboard.Data.Config
                 .WithOne()
                 .HasForeignKey(c => c.ClientId)
                 .IsRequired();
+            
+            builder.HasMany(c => c.ScriptResults) //One to many relationship with SessionData
+                .WithOne()
+                .HasForeignKey(c => c.ClientId)
+                .IsRequired();
         }
     }
 }
