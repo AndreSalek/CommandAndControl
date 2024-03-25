@@ -37,7 +37,8 @@ namespace DataDashboard.Controllers
         [AllowAnonymous]
         public IActionResult Index()
         {
-            return View();
+            IEnumerable<Client> clients = _context.Clients.Include("ClientHwInfo").ToList() ?? Enumerable.Empty<Client>();
+            return View(clients);
         }
 
         private IEnumerable<Script> SeedData()

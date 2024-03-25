@@ -1,3 +1,17 @@
 ﻿@{
     Layout = "_Layout";
+    ViewBag.IsSignedIn = SignInManager.IsSignedIn(User);
+    ViewBag.ShowSidebar = ViewContext.RouteData.Values["controller"].ToString() == "Client" ? true : false;
+    ViewBag.ColSideNav = "";
+    ViewBag.ColBody = "col-12";
+    if (ViewBag.IsSignedIn && ViewBag.ShowSidebar)
+    {
+        ViewBag.ColSideNav = "col-3";
+        ViewBag.ColBody = "col-9";
+    }
+    else
+    {
+        ViewBag.ColSideNav = "";
+        ViewBag.ColBody = "col-12";
+    }
 }

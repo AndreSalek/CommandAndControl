@@ -20,3 +20,13 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.table-wrapper {
+    table-layout: fixed;
+}
+
+.sidebar {
+    
+    left: 0;
+    bottom: 0;
+}
