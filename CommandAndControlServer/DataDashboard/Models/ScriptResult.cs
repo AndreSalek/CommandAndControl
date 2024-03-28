@@ -1,5 +1,9 @@
-﻿namespace DataDashboard.Models
+﻿using DataDashboard.Data.Config;
+using Microsoft.EntityFrameworkCore;
+
+namespace DataDashboard.Models
 {
+    [EntityTypeConfiguration(typeof(ScriptResultConfig))]
     public class ScriptResult
     {
         public int Id { get; set; }

@@ -99,6 +99,27 @@ namespace DataDashboard.Migrations
                     b.ToTable("Sessions");
                 });
 
+            modelBuilder.Entity("DataDashboard.Models.Script", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Shell")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Scripts");
+                });
+
             modelBuilder.Entity("DataDashboard.Models.ScriptResult", b =>
                 {
                     b.Property<int>("Id")
@@ -124,7 +145,7 @@ namespace DataDashboard.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.ToTable("ScriptResult");
+                    b.ToTable("ScriptResults");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

@@ -15,13 +15,13 @@ namespace DataDashboard.Data.Config
                 .IsRequired();
 
             builder.Property(ci => ci.ClientId)
-                .IsRequired(false);
+                .IsRequired();
 
             builder.Property(ci => ci.Content)
-                .IsRequired(false);
+                .IsRequired();
 
             builder.Property(ci => ci.IsError)
-                .IsRequired(false);
+                .IsRequired();
         }
     }
     

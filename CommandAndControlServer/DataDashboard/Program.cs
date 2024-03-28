@@ -79,6 +79,9 @@ namespace DataDashboard
             app.MapControllerRoute(
                 name: "Client",
                 pattern: "{controller=Client}/{action=ws}");
+            app.MapControllerRoute(
+                name: "Client",
+                pattern: "{controller=Client}/{action=Script}/{id?}");
 
             app.Run();
         }

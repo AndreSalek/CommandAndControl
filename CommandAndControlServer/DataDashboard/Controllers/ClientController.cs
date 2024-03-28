@@ -4,6 +4,7 @@ using DataDashboard.Data;
 using DataDashboard.Helpers;
 using DataDashboard.Models;
 using DataDashboard.Utility;
+using DataDashboard.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,6 @@ using System.Net.WebSockets;
 using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
-
 namespace DataDashboard.Controllers
 {
     [Authorize]
@@ -34,11 +34,79 @@ namespace DataDashboard.Controllers
             _clientService = clientService;
             _context = context;
         }
-        [AllowAnonymous]
         public IActionResult Index()
         {
-            IEnumerable<Client> clients = _context.Clients.Include("ClientHwInfo").ToList() ?? Enumerable.Empty<Client>();
+            IEnumerable<Client> clients = _context.Clients.Include(c => c.ClientHwInfo).Include(c => c.ConnectionHistory).ToList() ?? Enumerable.Empty<Client>();
+
+            //Create ClientViewModel here
+
             return View(clients);
+        }
+
+        public IActionResult Scripts()
+        {
+            var dbList = _context.Scripts.ToList();
+            List<ScriptViewModel> viewList = new List<ScriptViewModel>();
+            dbList.ForEach(item =>
+            {
+                viewList.Add(
+                    new ScriptViewModel()
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        Shell = item.Shell.ToString()
+                    }
+                    );
+            });
+            return View(viewList);
+        }
+
+        public async Task<IActionResult> Execute(int? id)
+        {
+            if (id == null) return View();
+            try
+            {
+                var paths = Directory.GetFiles("Scripts");
+
+                var script = await _context.Scripts.SingleAsync(s => s.Id == id);
+                foreach (var path in paths)
+                {
+                    var name = Path.GetFileNameWithoutExtension(path);
+                    if (name == script.Name)
+                    {
+                        script.Lines = System.IO.File.ReadAllLines(path);
+                        _clientService.ScriptToExecute.SetResult(script);
+                    }
+                    break;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return RedirectToAction("Scripts");
+        }
+
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return View();
+            try
+            {
+                var paths = Directory.GetFiles("Scripts");
+                var script = _context.Scripts.Single(s => s.Id == id);
+
+                var file = paths.Where(item => Path.GetFileNameWithoutExtension(item) == Path.GetFileNameWithoutExtension(script.Name)).Single();
+
+                _context.Scripts.Remove(script);
+                System.IO.File.Delete(file);
+                await _context.SaveChangesAsync();
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return RedirectToAction("Scripts");
         }
 
         private IEnumerable<Script> SeedData()
@@ -82,6 +150,7 @@ namespace DataDashboard.Controllers
             {
                 webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 // Authenticate client and add it to connected clients
+                
                 ClientHwInfo info = await CommunicationManager.ReceiveDataAsync<ClientHwInfo>(webSocket) ?? throw new WebSocketException("Connection closed.");
                 _logger.LogInformation($"Client connected: {info.MAC}");
 
@@ -99,7 +168,15 @@ namespace DataDashboard.Controllers
                     await _context.SaveChangesAsync();
                 }
                 clientId = _context.Clients.Single(client => client.ClientHwInfo.MAC == info.MAC).Id;
-
+                ConnectionData connectionData = new ConnectionData()
+                {
+                    ClientId = clientId,
+                    ConnectionId = Request.HttpContext.Connection.Id,
+                    IP = Request.HttpContext.Connection.RemoteIpAddress.ToString(),
+                    ConnectedAt = DateTime.Parse(DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss"))
+                };
+                await _context.Sessions.AddAsync(connectionData);
+                await _context.SaveChangesAsync();
                 //clientId = client.Id;
                 //ient = await _repository.GetCompleteClientAsync(info);
                 _clientService.ConnectedClients.Add(clientId);
@@ -122,9 +199,9 @@ namespace DataDashboard.Controllers
                                                 $"{scriptResult.Content}");
                         // Add result to collection
                         scriptResult.ClientId = clientId;
-                        //await _context.ScriptResults.Add(scriptResult);
 
-                        
+                        await _context.ScriptResults.AddAsync(scriptResult);
+                        //await _context.ScriptResults.Add(scriptResult);
                     }
                     catch (InvalidDataException dataException)
                     {

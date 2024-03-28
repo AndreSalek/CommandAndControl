@@ -1,0 +1,33 @@
+﻿@model List<ScriptViewModel>;
+<table class="table table-borderless table-wrapper">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Shell</th>
+            <th>Script Name</th>
+            <th>Execute</th>
+            <th>Delete</th>
+
+        </tr>
+    </thead>
+    <tbody class="accordion">
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.Shell</td>
+                <td>@item.Name</td>
+                <td>
+                    <a asp-controller="Client" asp-action="Execute" asp-route-id="@item.Id">
+                        <img src="Icons/execute.png" />
+                    </a>
+                </td>
+                <td>
+                    <a asp-controller="Client" asp-action="Delete" asp-route-id="@item.Id">
+                        <img src="Icons/delete.png" />
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
