@@ -4,6 +4,7 @@ using DataDashboard.Data;
 using DataDashboard.Helpers;
 using DataDashboard.Models;
 using DataDashboard.Utility;
+using DataDashboard.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,6 @@ using System.Net.WebSockets;
 using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
-
 namespace DataDashboard.Controllers
 {
     [Authorize]
@@ -34,31 +34,95 @@ namespace DataDashboard.Controllers
             _clientService = clientService;
             _context = context;
         }
-        [AllowAnonymous]
         public IActionResult Index()
         {
-            return View();
+            IEnumerable<Client> clients = _context.Clients.Include(c => c.ClientHwInfo).Include(c => c.ConnectionHistory).ToList() ?? Enumerable.Empty<Client>();
+            List<ClientViewModel> viewmodels = new List<ClientViewModel>();
+            //Create ClientViewModel here
+            foreach (var client in clients)
+            {
+                ClientViewModel vm = new ClientViewModel()
+                {
+                    Id = client.Id,
+                    Name = client.Name,
+                    LastIP = client.ConnectionHistory.Last().IP,
+                    LastConnectionTime = client.ConnectionHistory.Last().ConnectedAt,
+                    CpuId = client.ClientHwInfo.CpuId,
+                    MAC = client.ClientHwInfo.MAC,
+                    RAMCapacity = client.ClientHwInfo.RAMCapacity,
+                    OS = client.ClientHwInfo.OS
+                };
+                viewmodels.Add(vm);
+            }
+
+
+            return View(viewmodels);
         }
 
-        private IEnumerable<Script> SeedData()
+        public IActionResult Scripts()
         {
-            // Test
-            // TODO: Add script into database and then add it to collection
-            return new Script[]
+            _clientService.CheckDifferences();
+            var dbList = _context.Scripts.ToList();
+            List<ScriptViewModel> viewList = new List<ScriptViewModel>();
+            dbList.ForEach(item =>
             {
-                new Script()
+                viewList.Add(
+                    new ScriptViewModel()
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        Shell = item.Shell.ToString()
+                    }
+                    );
+            });
+            return View(viewList);
+        }
+
+        public async Task<IActionResult> Execute(int? id)
+        {
+            if (id == null) return View();
+            try
+            {
+                var paths = Directory.GetFiles("Scripts");
+
+                var script = await _context.Scripts.SingleAsync(s => s.Id == id);
+                foreach (var path in paths)
                 {
-                    Id = 1,
-                    Lines = new string[] { "Write-Output Hello World!" },
-                    Shell = ShellType.PowerShell
-                },
-                new Script()
-                {
-                    Id = 2,
-                    Lines = new string[] { "echo Hello World!" },
-                    Shell = ShellType.PowerShell
+                    var name = Path.GetFileNameWithoutExtension(path);
+                    if (name == script.Name)
+                    {
+                        script.Lines = System.IO.File.ReadAllLines(path);
+                        _clientService.ScriptToExecute.SetResult(script);
+                    }
                 }
-            };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return RedirectToAction("Scripts");
+        }
+
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return View();
+            try
+            {
+                var paths = Directory.GetFiles("Scripts");
+                var script = _context.Scripts.Single(s => s.Id == id);
+
+                var file = paths.Where(item => Path.GetFileNameWithoutExtension(item) == script.Name).SingleOrDefault();
+
+                _context.Scripts.Remove(script);
+                await _context.SaveChangesAsync();
+                System.IO.File.Delete(file);
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return RedirectToAction("Scripts");
         }
 
         [Route("{controller}/ws")]
@@ -81,6 +145,7 @@ namespace DataDashboard.Controllers
             {
                 webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 // Authenticate client and add it to connected clients
+                
                 ClientHwInfo info = await CommunicationManager.ReceiveDataAsync<ClientHwInfo>(webSocket) ?? throw new WebSocketException("Connection closed.");
                 _logger.LogInformation($"Client connected: {info.MAC}");
 
@@ -98,7 +163,15 @@ namespace DataDashboard.Controllers
                     await _context.SaveChangesAsync();
                 }
                 clientId = _context.Clients.Single(client => client.ClientHwInfo.MAC == info.MAC).Id;
-
+                ConnectionData connectionData = new ConnectionData()
+                {
+                    ClientId = clientId,
+                    ConnectionId = Request.HttpContext.Connection.Id,
+                    IP = Request.HttpContext.Connection.RemoteIpAddress.ToString(),
+                    ConnectedAt = DateTime.Parse(DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss"))
+                };
+                await _context.Sessions.AddAsync(connectionData);
+                await _context.SaveChangesAsync();
                 //clientId = client.Id;
                 //ient = await _repository.GetCompleteClientAsync(info);
                 _clientService.ConnectedClients.Add(clientId);
@@ -115,15 +188,17 @@ namespace DataDashboard.Controllers
                         ScriptResult? scriptResult = await CommunicationManager.ReceiveDataAsync<ScriptResult>(webSocket);
                         // Connection closed
                         if (scriptResult == null) { break;}
+                        _clientService.ScriptToExecute = new TaskCompletionSource<Script>();
                         // Result received
                         _logger.LogInformation($"Script result: \r\n" +
                                                 $"Returned result for script Id {scriptResult.CommandId}: " +
                                                 $"{scriptResult.Content}");
                         // Add result to collection
                         scriptResult.ClientId = clientId;
-                        //await _context.ScriptResults.Add(scriptResult);
 
-                        
+                        await _context.ScriptResults.AddAsync(scriptResult);
+                        await _context.SaveChangesAsync();
+                        //await _context.ScriptResults.Add(scriptResult);
                     }
                     catch (InvalidDataException dataException)
                     {

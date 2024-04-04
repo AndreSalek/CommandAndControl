@@ -1,37 +1,40 @@
-﻿@* Just assign the ViewData Title in corresponding controller action later *@
+﻿@using DataDashboard.Models
+@model IEnumerable<ClientViewModel>
 @{
 	ViewData["Title"] = "Connected Clients";
+    
 }
 @inject DataDashboard.BLL.Services.ClientService Clients
-<div class="container h-100 d-flex justify-content-center">
-    <h1 class="display-5">Connected Clients</h1>
-		<table class="table table-striped">
-			<thead>
-				<tr>
-					<th>Client ID</th>
-					<th>Client Name</th>
-					<th>Client IP</th>
-					<th>Client OS</th>
-					<th>Client Version</th>
-					<th>Client Status</th>
-					<th>Client Last Seen</th>
-				</tr>
-			</thead>
-			<tbody>
-				@* @foreach (var client in ConnectedClients)
-				{
-					<tr>
-						<td>@client.ClientId</td>
-						<td>@client.ClientName</td>
-						<td>@client.ClientIp</td>
-						<td>@client.ClientOs</td>
-						<td>@client.ClientVersion</td>
-						<td>@client.ClientStatus</td>
-						<td>@client.ClientLastSeen</td>
-					</tr>
-				} *@
-			</tbody>
-		</table>
-        
-   
-</div>
+
+
+<table class="table table-borderless table-wrapper">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Last IP</th>
+            <th>Cpu Id</th>
+
+        </tr>
+    </thead>
+    <tbody class="accordion">
+        @foreach (var item in Model)
+        {
+            <tr class="accordion-item" data-bs-toggle="collapse" data-bs-target="#A_@item.Id" aria-expanded="true">
+                @* <div class="accordion-header accordion-button" data-bs-toggle="collapse" data-bs-target="#A_@item.Id" aria-expanded="true" aria-controls="collapseOne"></div> *@
+                <td>@item.Id</td>
+                <td>@item.Name</td>
+                <td>@item.MAC</td>
+                <td>@item.CpuId</td>
+            </tr>
+            <tr id="A_@item.Id" class="collapse overflow-x-auto">
+                <td class="accordion-body " colspan="4">
+                    <h4 class="">Client information placeholder</h4> 
+                </td>
+            </tr>
+        }
+    </tbody>
+
+</table>
+
+
