@@ -74,7 +74,7 @@ namespace DataDashboard.Controllers
             if (result.IsLockedOut)
             {
                 _logger.LogWarning("User account locked out.");
-                return LocalRedirect("Lockout");
+                return LocalRedirect("/Account/Lockout");
             }
             else
             {
@@ -82,7 +82,6 @@ namespace DataDashboard.Controllers
                 ModelState.AddModelError(string.Empty, "Invalid login attempt.");
                 return View(model);
             }
-            
         }
 
         [HttpPost]

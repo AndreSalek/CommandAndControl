@@ -1,9 +1,9 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@* Moved to _ViewImports.cshtml *@
+@* @using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<IdentityUser> SignInManager
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager<IdentityUser> UserManager *@
 
-<ul class="navbar-nav">
 @if (SignInManager.IsSignedIn(User))
 {
     <li class="nav-item">
@@ -24,4 +24,3 @@ else
         <a class="nav-link" id="login" asp-controller="Account" asp-action="Login">Login</a>
     </li>
 }
-</ul>
